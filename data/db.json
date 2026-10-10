@@ -1,7 +1,7 @@
 {
   "brandAsset": null,
   "notionConfig": {
-    "hasToken": false,
+    "hasToken": true,
     "fieldMapping": {
       "titleField": "Title",
       "scenePromptField": "Scene Prompt",
@@ -31,6 +31,27 @@
     "lastUpdated": "2026-10-10T08:38:00.000Z"
   },
   "logs": [
+    {
+      "id": "39d85350-533c-4db6-9099-c38fb5aae681",
+      "timestamp": "2026-10-10T09:03:01.854Z",
+      "level": "info",
+      "category": "system",
+      "message": "Video removed from production library: \"Test Script\" (V01)."
+    },
+    {
+      "id": "6deb529d-83f1-4f1f-8022-7a7f9e5c0747",
+      "timestamp": "2026-10-10T09:02:57.872Z",
+      "level": "info",
+      "category": "system",
+      "message": "Video added to production library: \"Test Script\" (1 scenes)."
+    },
+    {
+      "id": "aeca2740-2dfa-4a22-af4a-4b8a6f4bd0be",
+      "timestamp": "2026-10-10T08:50:18.469Z",
+      "level": "error",
+      "category": "notion",
+      "message": "Notion connection test failed: API token is invalid."
+    },
     {
       "id": "init-log-1",
       "timestamp": "2026-10-10T08:38:00.000Z",

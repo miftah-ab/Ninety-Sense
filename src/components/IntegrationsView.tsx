@@ -12,9 +12,14 @@ import {
   Key,
   Database,
   Unlink,
+  Copy,
+  Check,
+  HelpCircle,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { User } from 'firebase/auth';
+import { api } from '../services/api';
 
 interface Props {
   notionConfig: any;
@@ -45,8 +50,12 @@ export const IntegrationsView: React.FC<Props> = ({
   const [notionError, setNotionError] = React.useState<string | null>(null);
   const [databases, setDatabases] = React.useState<any[]>([]);
   const [selectedDbId, setSelectedDbId] = React.useState('');
+  const [directDbInput, setDirectDbInput] = React.useState('');
+  const [inspectingDirect, setInspectingDirect] = React.useState(false);
   const [loadingDbs, setLoadingDbs] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
+  const [copiedSchema, setCopiedSchema] = React.useState(false);
+  const [showHelpDetails, setShowHelpDetails] = React.useState(true);
 
   // Field mapping
   const [titleField, setTitleField] = React.useState('Title');
@@ -56,11 +65,20 @@ export const IntegrationsView: React.FC<Props> = ({
 
   const handleConnectNotion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!notionToken) return;
+    if (!notionToken.trim()) return;
+
+    const trimmed = notionToken.trim();
+    if (!trimmed.startsWith('ntn_') && !trimmed.startsWith('secret_')) {
+      setNotionError(
+        "Invalid format: Notion Internal Integration Secrets start with 'ntn_' or 'secret_'. Get yours for free at notion.so/profile/integrations."
+      );
+      return;
+    }
+
     setConnectingNotion(true);
     setNotionError(null);
     try {
-      await onConnectNotion(notionToken);
+      await onConnectNotion(trimmed);
       setNotionToken('');
       loadDatabases();
     } catch (err: any) {
@@ -85,6 +103,26 @@ export const IntegrationsView: React.FC<Props> = ({
     }
   };
 
+  const handleInspectDirectDb = async () => {
+    if (!directDbInput.trim()) return;
+    setInspectingDirect(true);
+    setNotionError(null);
+    try {
+      const dbInfo = await api.inspectNotionDatabase(directDbInput.trim());
+      setDatabases((prev) => {
+        const exists = prev.some((d) => d.id === dbInfo.id);
+        return exists ? prev : [dbInfo, ...prev];
+      });
+      setSelectedDbId(dbInfo.id);
+      setDirectDbInput('');
+      alert(`Found database: "${dbInfo.title}"! Properties mapped automatically.`);
+    } catch (err: any) {
+      setNotionError(err.message || 'Could not find database with that ID or URL');
+    } finally {
+      setInspectingDirect(false);
+    }
+  };
+
   const handleImport = async () => {
     if (!selectedDbId) return;
     setImporting(true);
@@ -103,14 +141,24 @@ export const IntegrationsView: React.FC<Props> = ({
     }
   };
 
+  const handleCopySchema = () => {
+    const schemaText = `Ninety Sense Database Schema:
+- Title (Property type: Title) -> Video title (e.g., "The Architecture of Solitude")
+- Scene Prompt (Property type: Text / Rich text) -> Exact approved visual prompt
+- Scene Number (Property type: Number) -> 1, 2, 3...
+- Status (Property type: Select or Status) -> "Script Approved"`;
+    navigator.clipboard.writeText(schemaText);
+    setCopiedSchema(true);
+    setTimeout(() => setCopiedSchema(false), 2500);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-[#FAF8F2] border border-[#D7D0C0] rounded-xl p-6 shadow-xs">
         <h1 className="text-2xl font-bold text-[#1C1B19] tracking-tight">External Service Integrations</h1>
         <p className="text-xs text-[#625E56] max-w-2xl mt-1 leading-relaxed">
-          Configure secure connections to Notion, Google Drive, and the image generation service. All tokens and OAuth
-          credentials are encrypted or stored server-side.
+          Configure real, secure connections to Notion, Google Drive, and the image generation service. All secrets and OAuth tokens are handled server-side with zero mock data.
         </p>
       </div>
 
@@ -142,13 +190,13 @@ export const IntegrationsView: React.FC<Props> = ({
                 <div className="p-3 bg-[#E7EFE8]/50 border border-[#C5D9C8] rounded-lg text-xs space-y-1">
                   <div className="font-semibold text-[#366340] flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Workspace: {notionConfig.workspaceName || 'Ninety Sense'}</span>
+                    <span>Workspace: {notionConfig.workspaceName || 'Connected'}</span>
                   </div>
-                  <div className="text-[11px] text-[#625E56]">Token securely stored on backend server.</div>
+                  <div className="text-[11px] text-[#625E56]">Token securely verified with Notion API.</div>
                 </div>
 
                 {/* Databases dropdown */}
-                <div className="space-y-2 pt-2">
+                <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between text-xs font-semibold text-[#1C1B19]">
                     <span>Select Database:</span>
                     <button
@@ -174,92 +222,226 @@ export const IntegrationsView: React.FC<Props> = ({
                       ))}
                     </select>
                   ) : (
-                    <button
-                      onClick={loadDatabases}
-                      className="w-full py-2 text-xs font-medium text-[#1C1B19] bg-[#ECE6D8] border border-[#D7D0C0] rounded"
-                    >
-                      Load Databases from Notion
-                    </button>
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-[#625E56]">
+                        No database auto-detected yet. In Notion, make sure you shared your database with the integration (click <code className="bg-[#ECE6D8] px-1 rounded">···</code> &gt; Connections &gt; Add Ninety Sense OS).
+                      </p>
+                      <button
+                        onClick={loadDatabases}
+                        className="w-full py-1.5 text-xs font-medium text-[#1C1B19] bg-[#ECE6D8] border border-[#D7D0C0] rounded hover:bg-[#FAF8F2]"
+                      >
+                        Search Shared Databases
+                      </button>
+                    </div>
                   )}
 
-                  {/* Field Mapping */}
-                  <div className="p-3 bg-[#ECE6D8]/50 rounded-lg border border-[#D7D0C0] space-y-2 text-xs">
-                    <div className="font-semibold text-[#1C1B19] text-[11px] uppercase tracking-wider">
-                      Property Mapping:
+                  {/* Direct Database ID / URL input */}
+                  <div className="p-2.5 bg-[#ECE6D8]/40 rounded-lg border border-[#D7D0C0] space-y-1.5 text-xs">
+                    <div className="text-[11px] font-semibold text-[#1C1B19] flex items-center gap-1">
+                      <LinkIcon className="w-3 h-3 text-[#A94336]" />
+                      <span>Or Connect Directly by Notion Link / ID:</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div>
-                        <span className="text-[#625E56] block">Title Prop:</span>
-                        <input
-                          type="text"
-                          value={titleField}
-                          onChange={(e) => setTitleField(e.target.value)}
-                          className="w-full p-1 rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[#625E56] block">Prompt Prop:</span>
-                        <input
-                          type="text"
-                          value={promptField}
-                          onChange={(e) => setPromptField(e.target.value)}
-                          className="w-full p-1 rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[#625E56] block">Scene #:</span>
-                        <input
-                          type="text"
-                          value={numField}
-                          onChange={(e) => setNumField(e.target.value)}
-                          className="w-full p-1 rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[#625E56] block">Status:</span>
-                        <input
-                          type="text"
-                          value={statusField}
-                          onChange={(e) => setStatusField(e.target.value)}
-                          className="w-full p-1 rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
-                        />
-                      </div>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Paste Notion database URL or 32-char ID..."
+                        value={directDbInput}
+                        onChange={(e) => setDirectDbInput(e.target.value)}
+                        className="flex-1 p-1.5 text-[11px] rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19] font-mono"
+                      />
+                      <button
+                        onClick={handleInspectDirectDb}
+                        disabled={inspectingDirect || !directDbInput}
+                        className="px-2.5 py-1 text-[11px] font-medium text-[#F4F0E6] bg-[#1C1B19] rounded hover:bg-[#1C1B19]/80 disabled:opacity-50"
+                      >
+                        {inspectingDirect ? 'Loading...' : 'Load'}
+                      </button>
                     </div>
+                  </div>
+
+                  {/* Smart Auto-Detection & Property Mapping Info */}
+                  <div className="p-3 bg-[#E7EFE8]/60 rounded-lg border border-[#C5D9C8] space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-semibold text-[#366340]">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>Smart Auto-Detection: Enabled</span>
+                      </div>
+                      <span className="text-[10px] font-medium bg-[#366340]/10 text-[#366340] px-1.5 py-0.5 rounded">
+                        Zero Config
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#625E56] leading-relaxed">
+                      Ninety Sense automatically detects your columns (Title / Name, Scene Prompt / Script, Scene #, Status). No manual mapping is required!
+                    </p>
+
+                    {/* Explanatory dropdown for curious users */}
+                    <details className="pt-1 text-[11px] group cursor-pointer">
+                      <summary className="text-[#A94336] font-semibold hover:underline flex items-center gap-1 select-none">
+                        <span>What is Property Mapping? (Click to view)</span>
+                      </summary>
+                      <div className="mt-2 p-2.5 bg-[#FAF8F2] rounded border border-[#D7D0C0] space-y-2 text-[#625E56]">
+                        <p className="leading-relaxed">
+                          <strong>In plain terms:</strong> Every Notion database has columns (called "properties"). One person might name their column <em>"Scene Prompt"</em>, while another names it <em>"Prompt"</em> or <em>"Script"</em>. "Property Mapping" is just telling the app which column has which information.
+                        </p>
+                        <p className="text-[#366340] font-medium">
+                          ✓ You do <u>not</u> need to touch this! The app automatically finds your Title and Prompt columns.
+                        </p>
+
+                        <div className="pt-2 border-t border-[#D7D0C0] space-y-1.5">
+                          <span className="font-semibold text-[#1C1B19] block">Optional Manual Overrides:</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <span className="text-[#625E56] block text-[10px]">Title Column:</span>
+                              <input
+                                type="text"
+                                value={titleField}
+                                onChange={(e) => setTitleField(e.target.value)}
+                                placeholder="Auto-detect (Title / Name)"
+                                className="w-full p-1 text-[11px] rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[#625E56] block text-[10px]">Prompt Column:</span>
+                              <input
+                                type="text"
+                                value={promptField}
+                                onChange={(e) => setPromptField(e.target.value)}
+                                placeholder="Auto-detect (Prompt / Script)"
+                                className="w-full p-1 text-[11px] rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[#625E56] block text-[10px]">Scene # Column:</span>
+                              <input
+                                type="text"
+                                value={numField}
+                                onChange={(e) => setNumField(e.target.value)}
+                                placeholder="Auto-detect (Scene #)"
+                                className="w-full p-1 text-[11px] rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[#625E56] block text-[10px]">Status Column:</span>
+                              <input
+                                type="text"
+                                value={statusField}
+                                onChange={(e) => setStatusField(e.target.value)}
+                                placeholder="Auto-detect (Status)"
+                                className="w-full p-1 text-[11px] rounded bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </details>
                   </div>
 
                   <button
                     onClick={handleImport}
                     disabled={importing || !selectedDbId}
-                    className="w-full py-2 rounded text-xs font-semibold text-[#F4F0E6] bg-[#A94336] hover:bg-[#91352A] transition-colors"
+                    className="w-full py-2 rounded text-xs font-semibold text-[#F4F0E6] bg-[#A94336] hover:bg-[#91352A] transition-colors disabled:opacity-50"
                   >
-                    {importing ? 'Importing...' : 'Sync Approved Prompts'}
+                    {importing ? 'Importing...' : 'Sync Approved Prompts from Notion'}
                   </button>
                 </div>
               </div>
             ) : (
-              /* Connect form */
-              <form onSubmit={handleConnectNotion} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#625E56] uppercase mb-1">
-                    Notion Integration Token
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="secret_..."
-                    value={notionToken}
-                    onChange={(e) => setNotionToken(e.target.value)}
-                    className="w-full p-2 rounded text-xs bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19] focus:border-[#A94336] focus:outline-hidden"
-                  />
+              /* Connect form with Free User Guide */
+              <div className="space-y-4">
+                {/* 100% Free Notion instructions box */}
+                <div className="p-3.5 bg-[#FAF8F2] border border-[#D7D0C0] rounded-lg text-xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#1C1B19] uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-[#A94336]" />
+                      <span>Free Notion User Setup ($0)</span>
+                    </span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#E7EFE8] text-[#366340]">
+                      100% Free
+                    </span>
+                  </div>
+
+                  <p className="text-[#625E56] text-[11px] leading-relaxed">
+                    Where to get your Notion secret as a free user: The Notion API is completely free for all Notion accounts (Free, Plus, or Team). Follow these 4 simple steps:
+                  </p>
+
+                  <ol className="text-[11px] text-[#625E56] space-y-2 list-decimal list-inside leading-relaxed bg-[#ECE6D8]/50 p-2.5 rounded border border-[#D7D0C0]">
+                    <li>
+                      Open{' '}
+                      <a
+                        href="https://www.notion.so/profile/integrations"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#A94336] font-semibold underline inline-flex items-center gap-0.5"
+                      >
+                        <span>notion.so/profile/integrations</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </li>
+                    <li>
+                      Click <strong>"+ New integration"</strong>, name it <em>Ninety Sense OS</em>, select your workspace, and click <strong>Save</strong>.
+                    </li>
+                    <li>
+                      Under "Secrets", copy the <strong>Internal Integration Secret</strong> (starts with <code className="bg-[#FAF8F2] px-1 rounded font-mono">ntn_...</code> or <code className="bg-[#FAF8F2] px-1 rounded font-mono">secret_...</code>).
+                    </li>
+                    <li className="text-[#1C1B19] font-medium">
+                      <strong>Crucial step:</strong> Open your database in Notion, click the <code className="bg-[#FAF8F2] px-1 rounded font-mono">···</code> icon in the top-right corner &gt; <strong>"Connections"</strong> &gt; Add <em>Ninety Sense OS</em>. (Notion grants 0 access until shared!).
+                    </li>
+                  </ol>
+
+                  <div className="flex items-center gap-2">
+                    <a
+                      href="https://www.notion.so/profile/integrations"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 flex-1 py-1.5 rounded text-[11px] font-semibold text-[#1C1B19] bg-[#ECE6D8] border border-[#D7D0C0] hover:bg-[#FAF8F2] transition-colors"
+                    >
+                      <span>Open Notion Integrations Portal</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={handleCopySchema}
+                      className="inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded text-[11px] font-medium text-[#625E56] bg-[#ECE6D8] border border-[#D7D0C0] hover:text-[#1C1B19]"
+                      title="Copy database columns template"
+                    >
+                      {copiedSchema ? <Check className="w-3 h-3 text-[#366340]" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedSchema ? 'Copied' : 'Schema'}</span>
+                    </button>
+                  </div>
                 </div>
-                {notionError && <p className="text-[11px] text-[#A94336]">{notionError}</p>}
-                <button
-                  type="submit"
-                  disabled={connectingNotion || !notionToken}
-                  className="w-full py-2 rounded text-xs font-semibold text-[#F4F0E6] bg-[#A94336] hover:bg-[#91352A] transition-colors"
-                >
-                  {connectingNotion ? 'Connecting...' : 'Connect Notion'}
-                </button>
-              </form>
+
+                <form onSubmit={handleConnectNotion} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#625E56] uppercase mb-1">
+                      Paste Internal Integration Secret
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="ntn_... or secret_..."
+                      value={notionToken}
+                      onChange={(e) => {
+                        setNotionToken(e.target.value);
+                        setNotionError(null);
+                      }}
+                      className="w-full p-2 rounded text-xs bg-[#FAF8F2] border border-[#D7D0C0] text-[#1C1B19] focus:border-[#A94336] focus:outline-hidden font-mono"
+                    />
+                    {notionToken && !notionToken.startsWith('ntn_') && !notionToken.startsWith('secret_') && (
+                      <p className="text-[10px] text-[#A94336] mt-1">
+                        Notice: Notion secrets typically begin with <code className="font-mono">ntn_</code> or <code className="font-mono">secret_</code>.
+                      </p>
+                    )}
+                  </div>
+                  {notionError && <p className="text-[11px] text-[#A94336] leading-relaxed">{notionError}</p>}
+                  <button
+                    type="submit"
+                    disabled={connectingNotion || !notionToken.trim()}
+                    className="w-full py-2 rounded text-xs font-semibold text-[#F4F0E6] bg-[#A94336] hover:bg-[#91352A] transition-colors disabled:opacity-50"
+                  >
+                    {connectingNotion ? 'Validating Token...' : 'Connect Notion Workspace'}
+                  </button>
+                </form>
+              </div>
             )}
           </div>
 

@@ -218,6 +218,16 @@ export default function App() {
     await refreshData();
   };
 
+  const handleCreateVideo = async (videoData: any) => {
+    await api.createVideo(videoData);
+    await refreshData();
+  };
+
+  const handleDeleteVideo = async (videoId: string) => {
+    await api.deleteVideo(videoId);
+    await refreshData();
+  };
+
   const handleOpenImage = (url: string, title: string, subtitle?: string, driveUrl?: string) => {
     setPreviewImage({ url, title, subtitle, driveUrl });
   };
@@ -279,6 +289,8 @@ export default function App() {
             videos={videos}
             selectedVideoId={selectedVideoId}
             onSelectVideo={handleSelectVideo}
+            onCreateVideo={handleCreateVideo}
+            onDeleteVideo={handleDeleteVideo}
             onTabChange={setActiveTab}
             onOpenImage={handleOpenImage}
           />

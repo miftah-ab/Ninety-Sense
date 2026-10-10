@@ -229,6 +229,42 @@ class StorageManager {
     return this.db.videos.find((v) => v.id === id);
   }
 
+  public addVideo(video: Video): Video {
+    const existingIndex = this.db.videos.findIndex((v) => v.id === video.id);
+    if (existingIndex >= 0) {
+      this.db.videos[existingIndex] = video;
+    } else {
+      this.db.videos.push(video);
+    }
+    if (!this.db.selectedVideoId) {
+      this.db.selectedVideoId = video.id;
+    }
+    this.save();
+    this.log({
+      level: 'info',
+      category: 'system',
+      message: `Video added to production library: "${video.title}" (${video.scenes.length} scenes).`,
+    });
+    return video;
+  }
+
+  public deleteVideo(id: string): boolean {
+    const video = this.getVideo(id);
+    this.db.videos = this.db.videos.filter((v) => v.id !== id);
+    if (this.db.selectedVideoId === id) {
+      this.db.selectedVideoId = this.db.videos[0]?.id || null;
+    }
+    this.save();
+    if (video) {
+      this.log({
+        level: 'info',
+        category: 'system',
+        message: `Video removed from production library: "${video.title}" (${id}).`,
+      });
+    }
+    return true;
+  }
+
   public updateVideo(video: Video): void {
     const index = this.db.videos.findIndex((v) => v.id === video.id);
     if (index >= 0) {

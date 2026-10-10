@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import JSZip from 'jszip';
-import { storage } from './server/storage.js';
+import { storage, computeHash } from './server/storage.js';
 import { notionService } from './server/notionService.js';
 import { driveService } from './server/driveService.js';
 import { imageProvider } from './server/providers/imageProvider.js';
@@ -212,6 +212,60 @@ app.get('/api/videos', (req, res) => {
   res.json({ videos: storage.getVideos() });
 });
 
+app.post('/api/videos', (req, res) => {
+  try {
+    const { title, synopsis, scenes } = req.body;
+    if (!title) {
+      return res.status(400).json({ error: 'Video title is required.' });
+    }
+
+    const nextIndex = storage.getVideos().length + 1;
+    const videoId = `V${String(nextIndex).padStart(2, '0')}`;
+
+    const formattedScenes = (scenes || []).map((s: any, idx: number) => {
+      const sceneNum = s.sceneNumber !== undefined ? s.sceneNumber : idx + 1;
+      const prompt = s.approvedPrompt || s.prompt || '';
+      return {
+        id: `${videoId}-S${String(sceneNum).padStart(3, '0')}`,
+        sceneNumber: sceneNum,
+        approvedPrompt: prompt,
+        promptHash: computeHash(prompt),
+        characterConsistencyNotes: s.characterConsistencyNotes || 'Ninety Figure and open-cube geometry mandatory.',
+        status: 'pending' as const,
+        referenceAttached: false,
+        aspectRatio: (s.aspectRatio || '16:9') as any,
+        retryCount: 0,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    const newVideo = {
+      id: videoId,
+      title: title.trim(),
+      synopsis: synopsis ? synopsis.trim() : 'Approved Ninety Sense video script.',
+      status: 'Script Approved' as const,
+      createdAt: new Date().toISOString(),
+      scenes: formattedScenes,
+    };
+
+    storage.addVideo(newVideo);
+    res.json({ success: true, video: newVideo });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to create video.' });
+  }
+});
+
+app.delete('/api/videos/:id', (req, res) => {
+  try {
+    const video = storage.getVideo(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found.' });
+    storage.deleteVideo(req.params.id);
+    res.json({ success: true, deletedId: req.params.id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete video.' });
+  }
+});
+
 app.get('/api/videos/:id', (req, res) => {
   const video = storage.getVideo(req.params.id);
   if (!video) return res.status(404).json({ error: 'Video not found' });
@@ -256,6 +310,17 @@ app.get('/api/notion/databases', async (req, res) => {
     res.json({ databases: dbs });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/notion/inspect-database', async (req, res) => {
+  try {
+    const { databaseIdOrUrl } = req.body;
+    if (!databaseIdOrUrl) return res.status(400).json({ error: 'databaseIdOrUrl is required' });
+    const database = await notionService.getDatabase(databaseIdOrUrl);
+    res.json({ success: true, database });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message });
   }
 });
 

@@ -20,6 +20,28 @@ export const api = {
     return res.json();
   },
 
+  async createVideo(video: { title: string; synopsis?: string; scenes: Array<{ sceneNumber?: number; approvedPrompt: string; characterConsistencyNotes?: string; aspectRatio?: string }> }) {
+    const res = await fetchWithAuth('/api/videos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(video),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to create video');
+    }
+    return data;
+  },
+
+  async deleteVideo(id: string) {
+    const res = await fetchWithAuth(`/api/videos/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to delete video');
+    }
+    return data;
+  },
+
   async getVideo(id: string) {
     const res = await fetchWithAuth(`/api/videos/${id}`);
     return res.json();
@@ -96,6 +118,19 @@ export const api = {
       throw new Error(err.error || 'Failed to load databases');
     }
     return res.json();
+  },
+
+  async inspectNotionDatabase(databaseIdOrUrl: string) {
+    const res = await fetchWithAuth('/api/notion/inspect-database', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ databaseIdOrUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to fetch database');
+    }
+    return data.database;
   },
 
   async importNotion(databaseId: string, fieldMapping?: any) {
