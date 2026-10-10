@@ -1,0 +1,42 @@
+{
+  "brandAsset": null,
+  "notionConfig": {
+    "hasToken": false,
+    "fieldMapping": {
+      "titleField": "Title",
+      "scenePromptField": "Scene Prompt",
+      "sceneNumberField": "Scene Number",
+      "statusField": "Status"
+    }
+  },
+  "driveConfig": {
+    "rootFolderId": null,
+    "brandFolderId": null,
+    "videosFolderId": null,
+    "userEmail": null,
+    "isConnected": false
+  },
+  "selectedVideoId": null,
+  "videos": [],
+  "activeJob": {
+    "videoId": null,
+    "status": "idle",
+    "currentSceneIndex": 0,
+    "totalScenes": 0,
+    "completedScenes": 0,
+    "failedScenes": 0,
+    "pendingScenes": 0,
+    "referenceVersionLocked": null,
+    "startedAt": null,
+    "lastUpdated": "2026-10-10T08:38:00.000Z"
+  },
+  "logs": [
+    {
+      "id": "init-log-1",
+      "timestamp": "2026-10-10T08:38:00.000Z",
+      "level": "info",
+      "category": "system",
+      "message": "Production environment initialized with 0 mock data. Ready for real Notion sync and brand reference upload."
+    }
+  ]
+}

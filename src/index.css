@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@theme {
+  --color-warm-ivory: #F4F0E6;
+  --color-ivory-surface: #FAF8F2;
+  --color-ivory-card: #ECE6D8;
+  --color-ivory-border: #D7D0C0;
+  --color-dark-ink: #1C1B19;
+  --color-ink-muted: #625E56;
+  --color-ink-light: #8E897E;
+  --color-vermilion: #A94336;
+  --color-vermilion-hover: #91352A;
+  --color-vermilion-subtle: #F3E5E3;
+  --color-status-success: #366340;
+  --color-status-success-bg: #E7EFE8;
+  --color-status-warning: #875F20;
+  --color-status-warning-bg: #F8F1E2;
+  --color-status-error: #A94336;
+  --color-status-error-bg: #FBECEB;
+}
+
+:root {
+  background-color: #F4F0E6;
+  color: #1C1B19;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+body {
+  background-color: #F4F0E6;
+  color: #1C1B19;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbars with ink tones */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #EFE9DB;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8C0AE;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A94336;
+}
+
+/* Google Sign-In Material Button Styles */
+.gsi-material-button {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-appearance: none;
+  background-color: #FFFFFF;
+  background-image: none;
+  border: 1px solid #747775;
+  -webkit-border-radius: 4px;
+  border-radius: 4px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  color: #1f1f1f;
+  cursor: pointer;
+  font-family: 'Roboto', arial, sans-serif;
+  font-size: 14px;
+  height: 40px;
+  letter-spacing: 0.25px;
+  outline: none;
+  overflow: hidden;
+  padding: 0 12px;
+  position: relative;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color .218s, border-color .218s, box-shadow .218s;
+}
+
+.gsi-material-button .gsi-material-button-icon {
+  height: 20px;
+  margin-right: 12px;
+  min-width: 20px;
+  width: 20px;
+}
+
+.gsi-material-button .gsi-material-button-content-wrapper {
+  -webkit-align-items: center;
+  align-items: center;
+  display: flex;
+  -webkit-flex-direction: row;
+  flex-direction: row;
+  -webkit-flex-wrap: nowrap;
+  flex-wrap: nowrap;
+  height: 100%;
+  justify-content: space-between;
+  position: relative;
+  width: 100%;
+}
+
+.gsi-material-button .gsi-material-button-contents {
+  -webkit-flex-grow: 1;
+  flex-grow: 1;
+  font-family: 'Roboto', arial, sans-serif;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+
+.gsi-material-button:hover {
+  -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
+  background-color: #f7fafe;
+}

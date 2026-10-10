@@ -1,0 +1,6 @@
+{
+  "name": "Ninety Sense Visual Production OS",
+  "description": "Automated visual production suite for Ninety Sense: sync approved video scripts and prompts from Notion, enforce character reference consistency, and organize scene assets in Google Drive.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
